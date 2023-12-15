@@ -51,6 +51,7 @@ def getMac(ip):
     return answered_list[0][1].hwsrc
 
 def cleanSpoof(pdst, psrc):
+    
     hwdst = getMac(pdst)
     hwsrc = getMac(psrc)
     if not hwdst or not hwsrc:
