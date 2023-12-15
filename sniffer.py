@@ -9,7 +9,11 @@ def main():
     ecouteReseau()
 
 def ecouteReseau():
-    scapy.sniff(iface=args.iface, filter=args.filter, count=args.count, prn=analysePaquet, store=args.save)
+    if args.count:
+        scapy.sniff(iface=args.iface, filter=args.filter, count=args.count, prn=analysePaquet, store=args.save)
+    else:
+        scapy.sniff(iface=args.iface, filter=args.filter, prn=analysePaquet, store=args.save)
+
 
 def analysePaquet(packet):
     if packet.haslayer(http.HTTPRequest) and packet[http.HTTPRequest].haslayer(http.HTTPRequest):
